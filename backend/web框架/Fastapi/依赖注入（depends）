@@ -1,0 +1,83 @@
+依赖注入（Dependency Injection，DI）是一种软件设计思想：一个函数需要使用某个对象时，不由函数自己创建，而是由外部提供。
+
+以你正在学习的 FastAPI 为例。
+
+## 1. 不使用依赖注入
+
+假设你要开发一个查询用户信息的接口，需要连接数据库。
+
+```
+@app.get("/users")async def get_users():    db = Database()        # 自己创建数据库对象    users = await db.query_users()    return users
+```
+
+问题是：如果有 20 个接口需要数据库，你可能需要在 20 个接口中重复编写数据库对象创建代码，还需要自己管理连接的释放。
+
+## 2. 使用依赖注入
+
+FastAPI 提供了 `Depends()` 实现依赖注入。
+
+```
+from fastapi import FastAPI, Dependsapp = FastAPI()def get_db():    db = Database()    try:        yield db    finally:        db.close()@app.get("/users")def get_users(db = Depends(get_db)):    return db.query_users()
+```
+
+整个过程：
+
+```
+客户端请求 /users
+        ↓
+     FastAPI
+        ↓
+发现 Depends(get_db)
+        ↓
+  执行 get_db()
+        ↓
+    创建数据库对象
+        ↓
+  注入到 get_users(db)
+        ↓
+     执行业务逻辑
+        ↓
+   清理数据库资源
+        ↓
+     返回响应
+```
+
+这里最重要的一点是：
+
+`get_users()` 不需要知道数据库对象是怎么创建的，只需要使用 FastAPI 提供给它的 `db`。
+
+## 3. 为什么需要依赖注入？
+
+| 优点     | 解释              |
+| ------ | --------------- |
+| 降低耦合   | 业务函数不负责创建所需对象   |
+| 减少重复代码 | 多个接口可以复用同一个依赖定义 |
+| 方便测试   | 测试时可以替换成模拟数据库   |
+| 统一管理资源 | 统一创建和释放数据库连接等资源 |
+
+## 4. Depends 和中间件有什么区别？
+
+这是 FastAPI 初学者容易混淆的概念。
+
+- 中间件（Middleware）：在请求处理链中统一执行某些操作，比如日志记录、CORS。
+- 依赖注入（Depends）：根据接口声明的依赖，提供它需要的对象或执行相关逻辑，比如数据库 Session、当前用户信息。
+
+例如：
+
+```
+@app.get("/orders")def get_orders(    db = Depends(get_db),    user = Depends(get_current_user)):    ...
+```
+
+FastAPI 会自动：
+
+1. 调用 `get_db()`，获取数据库对象。
+2. 调用 `get_current_user()`，获取当前用户。
+3. 将两个结果传入 `get_orders()`。
+
+另外，依赖注入不等于 `Depends`。依赖注入是一种通用设计思想，`Depends` 只是 FastAPI 实现它的一种方式。
+
+你可以这样记忆：
+
+- 普通写法：我要什么，我自己创建。
+- 依赖注入：我要什么，你给我提供。
+
