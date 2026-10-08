@@ -1,0 +1,70 @@
+ASGI（Asynchronous Server Gateway Interface，异步服务器网关接口）是 Python Web 服务器与 Web 应用之间的一套通信标准。
+
+简单来说，ASGI 规定了 Uvicorn 和 FastAPI 应该如何交互。
+
+### 1. ASGI 在哪里？
+
+```
+       客户端（浏览器）
+              ↓
+         HTTP 请求
+              ↓
+           Uvicorn
+          (Web 服务器)
+              ↓
+        ASGI 接口规范
+              ↓
+           FastAPI
+          (Web 框架)
+              ↓
+           业务逻辑
+```
+
+注意：ASGI 是一套接口规范，不是独立运行的程序。
+
+### 2. 为什么需要 ASGI？
+
+假设 Uvicorn 和 FastAPI 是两个不同开发者编写的软件。
+
+如果没有统一标准，它们就需要自行约定如何传递请求、接收响应。
+
+有了 ASGI：
+
+- Uvicorn 按照 ASGI 标准向应用传递请求事件。
+- FastAPI 按照 ASGI 标准接收和处理请求。
+- 双方不需要为彼此编写专门的适配代码。
+
+这类似于 USB 接口标准：只要设备遵循相同标准，就可以互相连接。
+
+### 3. ASGI 和 WSGI 有什么区别？
+
+ASGI 的前身是 WSGI，两者都是 Python Web 服务器与应用之间的接口标准。
+
+| 对比        | WSGI                         | ASGI                                  |
+| --------- | ---------------------------- | ------------------------------------- |
+| 全称        | Web Server Gateway Interface | Asynchronous Server Gateway Interface |
+| 主要特点      | 同步接口                         | 支持异步                                  |
+| WebSocket | 不原生支持                        | 支持                                    |
+| 常见框架      | Flask、传统 Django              | FastAPI、Starlette                     |
+| 常见服务器     | Gunicorn、uWSGI               | Uvicorn、Daphne                        |
+
+ASGI 尤其适合需要处理大量并发 I/O 的应用，比如网络请求、数据库访问等，但并不意味着所有 ASGI 程序都一定比 WSGI 快。
+
+### 4. ASGI 和 async/await 有什么关系？
+
+例如，你在 FastAPI 中写：
+
+```
+@app.get("/chat")async def chat():    result = await call_llm()    return {"answer": result}
+```
+
+当 `call_llm()` 等待大模型响应时，如果它是真正的异步 I/O 操作，事件循环就可以执行其他请求的任务，而不必一直阻塞等待。
+
+ASGI 为这类异步应用提供了标准接口，Uvicorn 则负责运行它。
+
+一句话总结：
+
+- Uvicorn：Web 服务器，负责接收网络请求。
+- ASGI：通信标准，规定服务器与应用如何交互。
+- FastAPI：Web 框架，负责处理业务。
+- async/await：Python 的异步编程语法。
