@@ -1,0 +1,70 @@
+中间件（Middleware）是位于客户端请求和业务逻辑之间的一层处理程序，用于统一处理请求和响应。
+
+### 1. 工作原理
+
+以 FastAPI 为例：
+
+```
+客户端发送 HTTP 请求
+        ↓
+    中间件
+    ├── 身份认证
+    ├── 请求日志
+    └── 请求耗时统计
+        ↓
+    FastAPI 业务接口
+        ↓
+    中间件（处理响应）
+        ↓
+客户端收到 HTTP 响应
+```
+
+### 2. 中间件有什么作用？
+
+常见用途包括：
+
+| 功能      | 说明             |
+| ------- | -------------- |
+| 身份认证    | 检查用户是否有权限访问    |
+| 日志记录    | 记录请求路径、响应状态等   |
+| CORS 跨域 | 控制哪些网站可以访问 API |
+| 耗时统计    | 统计每个请求的处理时间    |
+| 安全防护    | 实现请求频率限制等功能    |
+
+### 3. FastAPI 中间件示例
+
+```
+from fastapi import FastAPI, Requestapp = FastAPI()@app.middleware("http")async def log_middleware(request: Request, call_next):    print("收到请求")    response = await call_next(request)    print("请求处理完成")    return response
+```
+
+其中：
+
+- `request`：客户端发来的请求。
+- `call_next(request)`：将请求交给下一层处理。
+- `response`：下游处理完成后返回的响应。
+
+核心理解：中间件就是把多个接口都需要的公共功能提取出来，统一处理，避免在每个接口里重复编写代码。
+
+例如，你开发一个 RAG 系统，有 20 个 API 接口。通过中间件，可以统一记录所有接口的请求日志，而不需要在每个接口中分别编写日志代码。
+
+Q:那客户端发送请求以后进入uvicorn还是中间件
+A:客户端（浏览器 / Postman）
+          ↓
+     HTTP 请求
+          ↓
+       Uvicorn
+   （接收并解析请求）
+          ↓
+    FastAPI 中间件
+   （日志、鉴权、跨域等）
+          ↓
+    FastAPI 路由接口
+   （执行具体业务逻辑）
+          ↓
+    FastAPI 中间件
+   （处理返回的响应）
+          ↓
+       Uvicorn
+   （发送 HTTP 响应）
+          ↓
+        客户端
